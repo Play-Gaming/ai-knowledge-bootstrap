@@ -25,12 +25,22 @@ Check whether this is set in the environment of the process running you; report 
 
 If it is set, go to step 2. Otherwise stop, give the user the instructions below, and wait.
 
-1. Create a fine-grained token at https://github.com/settings/personal-access-tokens/new
-   - Resource owner: `Play-Gaming` (your account must be an organization member).
-   - Repository access: Only select repositories → `Play-Gaming/ai-knowledge`
-   - Repository permissions: Contents — Read and write; Pull requests — Read and write; Actions — Read-only.
-     Fine-grained tokens have no Checks permission; Actions is what the knowledge workflow reads.
-     Add Workflows — Read and write only for changes to CI.
+1. Create a personal access token (classic) at https://github.com/settings/tokens/new using your own
+   GitHub account.
+   - Select all available scopes, including administrative scopes, and set an expiration compatible
+     with your organization's policy. Do not limit access to `Play-Gaming/ai-knowledge`: the connection
+     is also intended to read and work with other repositories you can access, without cloning them.
+   - Effective access is limited by your own permissions, the selected scopes, and GitHub organization
+     or enterprise policies. Selecting all scopes does not grant permissions you lack or guarantee
+     that every GitHub feature is available through the API or enabled MCP tools.
+   - Where SAML SSO is enforced, authorize the token for each required organization. If an organization
+     blocks classic tokens, report that restriction; do not bypass it. A fine-grained token is an
+     alternative only with an explicit explanation that it covers one resource owner and selected
+     permissions, rather than all of your access.
+   - Broad permissions do not authorize unrelated operations or bypass the knowledge repository's
+     protected-path review and separate human-controlled Git process. Where an independently enforced
+     MCP identity is used, keep it restricted as the knowledge repository's SECURITY_POLICY.md
+     requires; use the broad personal token only for a separate user-controlled connection.
 2. Store it outside the conversation, as the environment variable `PLAYSMART_MCP_GIT_HUB_TOKEN`, in a place the
    non-interactive commands of the AI client read:
    - **macOS** (zsh), in a regular terminal. The first command asks for the token and keeps it in the
@@ -81,15 +91,22 @@ it belongs to, then the cause and the fix below. Never show the token value or p
 - `000`: the request did not reach GitHub, usually a sandbox or network restriction of the AI client.
   Rerun the command with network access before judging the token.
 - `401`: the token is invalid, expired, or revoked; no login is returned. Return to step 1.
+- `403`: check organization restrictions, required SSO authorization, and the API error response
+  (including rate limits). Report the cause without exposing the token; do not bypass organization policy.
 - `404`: the token works but cannot see `Play-Gaming/ai-knowledge`. Name the likely cause:
   - **Wrong account**: the login is not an account with access to `Play-Gaming/ai-knowledge`. The variable
     holds another account's token; point it at the right token, open a new terminal, and restart the client.
   - **Repository not selected in a fine-grained token**: the login is right. Open
     https://github.com/settings/personal-access-tokens, edit the token, and under Repository access select
-    `ai-knowledge` with the step 1 permissions. A repository that was deleted and recreated must be
+    `ai-knowledge` with Contents and Pull requests read/write, Actions read, and Workflows read/write
+    only for CI changes. This fallback remains limited to its selected repositories and permissions.
+    A repository that was deleted and recreated must be
     selected again, even under the same name. The token value does not change, so no restart is needed.
   - **Account without access**: a classic token of an account that is not a collaborator. Use a token of
     an account with access, or ask the owner to add that account as a collaborator.
+  - **Classic token scope or SSO**: check that the token includes the `repo` scope and is authorized
+    for the organization when SSO is required. Repository visibility in the browser or access through
+    a separate Git SSH key does not establish access for this token.
 
 The `gh` CLI is not required.
 
